@@ -27,12 +27,9 @@ ArrayList *al_create(long capacity){
 
 void al_destroy(ArrayList *al, void (*userFunction)(void *element)){
 	int i;
-	for(i = 0; i < al->capacity; i++){
+	for(i = 0; i < al->size && (userFunction != NULL); i++){
 		void *item = al->items[i];
-		if(item != NULL) {
-			if (userFunction != NULL) userFunction(item);
-			// free(item); //Not sure if needed
-		}
+		userFunction(item);
 	}
 	free(al->items);
 	free(al);
@@ -45,17 +42,14 @@ long al_size(ArrayList *al){
 int al_add(ArrayList *al, void *element){
 	int result = 1;
 	if(al->size==al->capacity){
-		ArrayList *new_al = al_create((al->capacity)*2);
-		long i;
-		for(i = 0 ;i < al->size; i++){
-			al_add(new_al, al->items[i]);
+		long new_capacity =  (al->capacity)*2;
+		al->items = (void**) realloc(al->items, new_capacity * sizeof(void*));
+		if (al->items == NULL) {
+			result = 0;
+		}  else {
+			al->capacity = new_capacity;
+			al_add(al, element);
 		}
-		al_add(new_al, element);
-		ArrayList temp;
-		temp = *al;
-		*al = *new_al;
-		//TODO:Fix memory leak here
-		free(temp.items);
 	} else {
 		al->items[al->size] = element;
 		(al->size)++;
@@ -72,6 +66,9 @@ int al_get(ArrayList *al_long, long i, void **element){
 	return 0;
 }
 
+/*
+* only works if elements are ints
+*/
 void al_int_print(ArrayList *al){
 	long i;
 	for(i = 0; i < al->capacity;i++){
@@ -88,28 +85,30 @@ void al_int_print(ArrayList *al){
 }
 
 int al_insert(ArrayList *al, long i, void *element){
-	int result = 0;
-	if( i > al->size) return result;
+	if( i > al->size) return 0;
 	else if( i == al->size) {
 		al_add(al, element);
-		result = 1;
-	} else if (i < al->size){
-		ArrayList *new_al = al_create(al->capacity);
+	} else if (i < al->size){ // have to shift here
+		void **old_item_structure = al->items;
+		void **new_item_structure = (void**) malloc(sizeof(void *)*al->capacity);
+		if(new_item_structure == NULL) return 0;
+		int old_size = al->size;
+		al->size = 0;
+		al->items = new_item_structure;
 		int n;
-		for(n = 0;n <= al->size;n++){
+		for(n = 0;n <= old_size;n++){
 			if(n==i){
-				al_add(new_al, element);
+				al_add(al, element);
 			} else if (n < i){
-				al_add(new_al, al->items[n]);
+				al_add(al, old_item_structure[n]);
 			} else if (n > i){
-				al_add(new_al, al->items[n-1]);
+				al_add(al, old_item_structure[n-1]);
 			}
 		}
-		//TODO:Fix memory leak here.(old list is leaked)
-		*al = *new_al;
-		result = 1;
+
+		free(old_item_structure);
 	}
-	return result;
+	return 1;
 }
 
 // int al_remove(ArrayList *al, long i, void **elements){
@@ -123,28 +122,30 @@ int al_insert(ArrayList *al, long i, void *element){
 int main(){
 	ArrayList *al = al_create(2);
 
-	int a = 1;
-	int b = 2;
-	int c = 3;
-	int d = 4;
+	// int a = 1;
+	// int b = 2;
+	// int c = 3;
+	// int d = 4;
+	char *s1 = "barack";
+	char *s2 = "obama";
 
-	al_add(al, &a);
-	al_add(al, &b);
-	al_add(al, &c);
+	al_add(al, s1);
+	al_add(al, s2);
+	// al_add(al, &c);
 	// al_add(al, &d);
 
-	al_int_print(al);
+	// al_int_print(al);
 
-	void *item;
-	int found = al_get(al, 3, &item);
-	int i = *((int*) item);
-	printf("f:%d i:%d\n",found, i );
+	// void *item;
+	// int found = al_get(al, 3, &item);
+	// int i = *((int*) item);
+	// printf("f:%d i:%d\n",found, i );
 
-	al_insert(al, 3, &d);
-	al_int_print(al);
+	// al_insert(al, 3, &d);
+	// al_int_print(al);
 
-	al_insert(al, 2, &d);
-	al_int_print(al);
+	// al_insert(al, 2, &d);
+	// al_int_print(al);
 
 	al_destroy(al, NULL);
 }
